@@ -20,12 +20,10 @@ export default class OrphanCleanerPlugin extends Plugin {
 
 		this.addSettingTab(new OrphanCleanerSettingsTab(this.app, this));
 
-		// This creates an icon in the left ribbon.
 		this.addRibbonIcon('trash', 'Clean orphan nodes', (_evt: MouseEvent) => {
 			this.openOrphanConfirmation();
 		});
 
-		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
 			id: 'clean-orphan-nodes',
 			name: 'Clean orphan nodes',
@@ -82,7 +80,8 @@ export default class OrphanCleanerPlugin extends Plugin {
 			}
 		}
 
-		const targetExtensions: string[] = ["md", "png", "pdf", "jpeg"];
+		const targetExtensions: string[] = this.settings.fileExtensions
+			.toLowerCase().split(" ");
 
 		for (const file of files) {
 			if (!targetExtensions.includes(file.extension.toLowerCase())) {

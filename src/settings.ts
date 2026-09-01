@@ -1,18 +1,18 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
-import MyPlugin from './main';
+import OrphanCleanerPlugin from './main';
 
 export interface OrphanCleanerSettings {
-	mySetting: string;
+	fileExtensions: string;
 }
 
 export const DEFAULT_SETTINGS: OrphanCleanerSettings = {
-	mySetting: 'default',
+	fileExtensions: 'md png jpeg pdf',
 };
 
 export class OrphanCleanerSettingsTab extends PluginSettingTab {
-	plugin: MyPlugin;
+	plugin: OrphanCleanerPlugin;
 
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: OrphanCleanerPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
@@ -23,14 +23,16 @@ export class OrphanCleanerSettingsTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName('Settings #1')
-			.setDesc("It's a secret")
+			.setName('File Extensions')
+			.setDesc("The plugin will search only for these file extensions.\n" + 
+				"Enter extension names seperated by a single space and without dots"
+			)
 			.addText((text) =>
 				text
-					.setPlaceholder('Enter your secret')
-					.setValue(this.plugin.settings.mySetting)
+					.setPlaceholder('md png jpeg pdf')
+					.setValue(this.plugin.settings.fileExtensions)
 					.onChange(async (value) => {
-						this.plugin.settings.mySetting = value;
+						this.plugin.settings.fileExtensions = value;
 						await this.plugin.saveSettings();
 					}),
 			);
