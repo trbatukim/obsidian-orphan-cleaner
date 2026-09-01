@@ -14,18 +14,23 @@ import {
 
 export default class OrphanCleanerPlugin extends Plugin {
 	settings!: OrphanCleanerSettings;
+	private metadataCacheResolved = false;
 
 	async onload() {
 		await this.loadSettings();
 
+		this.registerEvent(
+			this.app.metadataCache.on('resolved', () => {
+				this.metadataCacheResolved = true;
+			}),
+		);
+
 		this.addSettingTab(new OrphanCleanerSettingsTab(this.app, this));
 
-		// This creates an icon in the left ribbon.
 		this.addRibbonIcon('trash', 'Clean orphan nodes', (_evt: MouseEvent) => {
 			this.openOrphanConfirmation();
 		});
 
-		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
 			id: 'clean-orphan-nodes',
 			name: 'Clean orphan nodes',
@@ -36,6 +41,11 @@ export default class OrphanCleanerPlugin extends Plugin {
 	}
 
 	openOrphanConfirmation() {
+		if (!this.metadataCacheResolved) {
+			new Notice('Obsidian is still indexing your vault. Please try again in a moment.');
+			return;
+		}
+
 		const orphans = this.findOrphans();
 
 		if (orphans.length === 0) {
@@ -49,10 +59,20 @@ export default class OrphanCleanerPlugin extends Plugin {
 	}
 
 	async deleteOrphans(orphans: TFile[]) {
+		let deleted: number = 0;
+		let failed: number = 0;
+
 		for (const file of orphans) {
-			await this.app.fileManager.trashFile(file);
+			try {
+				await this.app.fileManager.trashFile(file);
+				deleted++;
+			} catch {
+				failed++;
+			}
 		}
-		new Notice(`Deleted ${orphans.length} orphan file(s).`);
+
+		if (deleted !== 0) new Notice(`Deleted ${deleted} orphan file(s).`);
+		if (failed !== 0) new Notice(`Failed to delete ${failed} orphan file(s).`);
 	}
 
 	onunload() {}
@@ -82,14 +102,22 @@ export default class OrphanCleanerPlugin extends Plugin {
 			}
 		}
 
-		const targetExtensions: string[] = ["md", "png", "pdf", "jpeg"];
+		const targetExtensions: string[] = this.settings.fileExtensions
+			.toLowerCase().split(" ");
+
+		const excludedPaths: string[] = this.settings.excludedPaths
+			.split("\n")
+			.map((path) => path.trim().replace(/\/+$/, ""))
+			.filter((path) => path.length > 0);
 
 		for (const file of files) {
+			if (this.isExcluded(file.path, excludedPaths)) continue;
+
 			if (!targetExtensions.includes(file.extension.toLowerCase())) {
 				nonOrphans.add(file.path);
 				continue;
 			}
-			
+
 			if (referencedPaths.has(file.path)) nonOrphans.add(file.path);
 			if (resolvedLinks[file.path]) nonOrphans.add(file.path);
 
@@ -97,6 +125,12 @@ export default class OrphanCleanerPlugin extends Plugin {
 		}
 
 		return orphans;
+	}
+
+	private isExcluded(filePath: string, excludedPaths: string[]): boolean {
+		return excludedPaths.some(
+			(excludedPath) => filePath === excludedPath || filePath.startsWith(excludedPath + "/"),
+		);
 	}
 }
 
@@ -113,12 +147,17 @@ class ConfirmDeleteModal extends Modal {
 	onOpen() {
 		const { contentEl } = this;
 
-		contentEl.createEl('h2', { text: `Delete ${this.files.length} orphan file(s)?` });
+		this.setTitle(`Delete ${this.files.length} orphan file(s)?`);
 
-		const list = contentEl.createEl('ul');
+		const list = contentEl.createEl('ul', { cls: 'orphan-cleaner-file-list' });
 		for (const file of this.files) {
 			list.createEl('li', { text: file.path });
 		}
+
+		contentEl.createEl('p', {
+			text: this.describeTrashBehavior(),
+			cls: 'mod-warning',
+		});
 
 		const buttonRow = contentEl.createDiv({ cls: 'modal-button-container' });
 
@@ -138,5 +177,21 @@ class ConfirmDeleteModal extends Modal {
 
 	onClose() {
 		this.contentEl.empty();
+	}
+
+	private describeTrashBehavior(): string {
+		const trashOption: unknown = (this.app.vault as { getConfig?: (key: string) => unknown })
+			.getConfig?.('trashOption');
+
+		switch (trashOption) {
+			case 'system':
+				return 'This action cannot be undone from within Obsidian. Files will be moved to your system trash/recycle bin.';
+			case 'local':
+				return 'This action cannot be undone from within Obsidian. Files will be moved to this vault\'s .trash folder.';
+			case 'none':
+				return 'This action cannot be undone. Files will be permanently deleted (your vault is set to skip the trash).';
+			default:
+				return 'This action cannot be undone from within Obsidian. Files will be deleted according to your vault\'s trash setting (Settings → Files and links).';
+		}
 	}
 }
