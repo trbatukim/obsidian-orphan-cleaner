@@ -26,8 +26,7 @@ export class OrphanCleanerSettingsTab extends PluginSettingTab {
 			.setName('File extensions')
 			.setDesc("The plugin will search only for these file extensions.\n" + 
 				"Enter extension names separated by a single space and without dots"
-			)
-			.addText((text) =>
+			).addText((text) =>
 				text
 					.setPlaceholder('md png jpeg pdf')
 					.setValue(this.plugin.settings.fileExtensions)
