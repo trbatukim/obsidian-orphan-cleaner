@@ -16,12 +16,12 @@ export default class OrphanCleanerPlugin extends Plugin {
 	settings!: OrphanCleanerSettings;
 
 	async onload() {
-		console.log("Loading Orphan Node Cleaner...");
-
 		await this.loadSettings();
 
+		this.addSettingTab(new OrphanCleanerSettingsTab(this.app, this));
+
 		// This creates an icon in the left ribbon.
-		this.addRibbonIcon('trash', 'Clean Orphan Nodes', (_evt: MouseEvent) => {
+		this.addRibbonIcon('trash', 'Clean orphan nodes', (_evt: MouseEvent) => {
 			this.openOrphanConfirmation();
 		});
 
@@ -43,12 +43,16 @@ export default class OrphanCleanerPlugin extends Plugin {
 			return;
 		}
 
-		new ConfirmDeleteModal(this.app, orphans, async () => {
-			for (const file of orphans) {
-				await this.app.vault.trash(file, true);
-			}
-			new Notice(`Deleted ${orphans.length} orphan file(s).`);
+		new ConfirmDeleteModal(this.app, orphans, () => {
+			void this.deleteOrphans(orphans);
 		}).open();
+	}
+
+	async deleteOrphans(orphans: TFile[]) {
+		for (const file of orphans) {
+			await this.app.fileManager.trashFile(file);
+		}
+		new Notice(`Deleted ${orphans.length} orphan file(s).`);
 	}
 
 	onunload() {}

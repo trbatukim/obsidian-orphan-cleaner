@@ -2,10 +2,8 @@
 	"id": "obsidian-orphan-cleaner",
 	"name": "Orphan Cleaner",
 	"version": "1.0.0",
-	"minAppVersion": "1.0.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"minAppVersion": "1.6.6",
+	"description": "Finds and deletes orphan nodes.",
+	"author": "trbatukim",
 	"isDesktopOnly": false
 }
