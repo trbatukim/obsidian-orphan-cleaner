@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-sample-plugin",
+	"name": "obsidian-orphan-cleaner",
 	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"description": "Finds and deletes orphan nodes.",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {
