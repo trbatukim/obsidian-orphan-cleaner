@@ -1,5 +1,6 @@
 import {
 	App,
+	getAllTags,
 	Modal,
 	Notice,
 	Plugin,
@@ -24,6 +25,10 @@ export default class OrphanCleanerPlugin extends Plugin {
 				this.metadataCacheResolved = true;
 			}),
 		);
+
+		this.app.workspace.onLayoutReady(() => {
+			this.metadataCacheResolved = true;
+		});
 
 		this.addSettingTab(new OrphanCleanerSettingsTab(this.app, this));
 
@@ -93,7 +98,6 @@ export default class OrphanCleanerPlugin extends Plugin {
 		const files = this.app.vault.getFiles();
 		const resolvedLinks = this.app.metadataCache.resolvedLinks;
 		const orphans: TFile[] = [];
-		const nonOrphans: Set<string> = new Set(Object.keys(resolvedLinks));
 
 		const referencedPaths: Set<string> = new Set();
 		for (const targets of Object.values(resolvedLinks)) {
@@ -103,25 +107,29 @@ export default class OrphanCleanerPlugin extends Plugin {
 		}
 
 		const targetExtensions: string[] = this.settings.fileExtensions
-			.toLowerCase().split(" ");
+			.toLowerCase()
+			.split(/[\s,]+/)
+			.map((ext) => ext.replace(/^\.+/, ""))
+			.filter((ext) => ext.length > 0);
 
 		const excludedPaths: string[] = this.settings.excludedPaths
 			.split("\n")
 			.map((path) => path.trim().replace(/\/+$/, ""))
 			.filter((path) => path.length > 0);
 
+		const excludeTags: boolean = this.settings.excludeTags;
+
 		for (const file of files) {
 			if (this.isExcluded(file.path, excludedPaths)) continue;
+			if (!targetExtensions.includes(file.extension.toLowerCase())) continue;
+			if (referencedPaths.has(file.path)) continue;
 
-			if (!targetExtensions.includes(file.extension.toLowerCase())) {
-				nonOrphans.add(file.path);
-				continue;
-			}
+			const outgoingLinks = resolvedLinks[file.path];
+			if (outgoingLinks && Object.keys(outgoingLinks).length > 0) continue;
 
-			if (referencedPaths.has(file.path)) nonOrphans.add(file.path);
-			if (resolvedLinks[file.path]) nonOrphans.add(file.path);
+			if (excludeTags && this.hasTags(file)) continue;
 
-			if (!nonOrphans.has(file.path)) orphans.push(file);
+			orphans.push(file);
 		}
 
 		return orphans;
@@ -131,6 +139,14 @@ export default class OrphanCleanerPlugin extends Plugin {
 		return excludedPaths.some(
 			(excludedPath) => filePath === excludedPath || filePath.startsWith(excludedPath + "/"),
 		);
+	}
+
+	private hasTags(file: TFile): boolean {
+		const cache = this.app.metadataCache.getFileCache(file);
+		if (!cache) return false;
+
+		const tags = getAllTags(cache);
+		return tags !== null && tags.length > 0;
 	}
 }
 
