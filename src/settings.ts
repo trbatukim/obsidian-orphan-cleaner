@@ -3,10 +3,12 @@ import OrphanCleanerPlugin from './main';
 
 export interface OrphanCleanerSettings {
 	fileExtensions: string;
+	excludedPaths: string;
 }
 
 export const DEFAULT_SETTINGS: OrphanCleanerSettings = {
 	fileExtensions: 'md png jpeg pdf',
+	excludedPaths: '',
 };
 
 export class OrphanCleanerSettingsTab extends PluginSettingTab {
@@ -35,5 +37,22 @@ export class OrphanCleanerSettingsTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}),
 			);
+
+		new Setting(containerEl)
+			.setName('Excluded paths')
+			.setDesc(
+				'Files inside these folders, or matching these exact file paths, will never be treated as orphans. ' +
+				'Enter one folder or file path per line, relative to the vault root.'
+			)
+			.addTextArea((text) => {
+				text
+					.setPlaceholder('Templates\nAttachments/Archive')
+					.setValue(this.plugin.settings.excludedPaths)
+					.onChange(async (value) => {
+						this.plugin.settings.excludedPaths = value;
+						await this.plugin.saveSettings();
+					});
+				text.inputEl.rows = 4;
+			});
 	}
 }

@@ -105,12 +105,19 @@ export default class OrphanCleanerPlugin extends Plugin {
 		const targetExtensions: string[] = this.settings.fileExtensions
 			.toLowerCase().split(" ");
 
+		const excludedPaths: string[] = this.settings.excludedPaths
+			.split("\n")
+			.map((path) => path.trim().replace(/\/+$/, ""))
+			.filter((path) => path.length > 0);
+
 		for (const file of files) {
+			if (this.isExcluded(file.path, excludedPaths)) continue;
+
 			if (!targetExtensions.includes(file.extension.toLowerCase())) {
 				nonOrphans.add(file.path);
 				continue;
 			}
-			
+
 			if (referencedPaths.has(file.path)) nonOrphans.add(file.path);
 			if (resolvedLinks[file.path]) nonOrphans.add(file.path);
 
@@ -118,6 +125,12 @@ export default class OrphanCleanerPlugin extends Plugin {
 		}
 
 		return orphans;
+	}
+
+	private isExcluded(filePath: string, excludedPaths: string[]): boolean {
+		return excludedPaths.some(
+			(excludedPath) => filePath === excludedPath || filePath.startsWith(excludedPath + "/"),
+		);
 	}
 }
 
