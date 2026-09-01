@@ -1,5 +1,6 @@
 import {
 	App,
+	getAllTags,
 	Modal,
 	Notice,
 	Plugin,
@@ -118,6 +119,11 @@ export default class OrphanCleanerPlugin extends Plugin {
 			if (!targetExtensions.includes(file.extension.toLowerCase())) continue;
 			if (referencedPaths.has(file.path)) continue;
 
+			const outgoingLinks = resolvedLinks[file.path];
+			if (outgoingLinks && Object.keys(outgoingLinks).length > 0) continue;
+
+			if (this.hasTags(file)) continue;
+
 			orphans.push(file);
 		}
 
@@ -128,6 +134,14 @@ export default class OrphanCleanerPlugin extends Plugin {
 		return excludedPaths.some(
 			(excludedPath) => filePath === excludedPath || filePath.startsWith(excludedPath + "/"),
 		);
+	}
+
+	private hasTags(file: TFile): boolean {
+		const cache = this.app.metadataCache.getFileCache(file);
+		if (!cache) return false;
+
+		const tags = getAllTags(cache);
+		return tags !== null && tags.length > 0;
 	}
 }
 
