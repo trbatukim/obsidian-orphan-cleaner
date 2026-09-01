@@ -107,7 +107,10 @@ export default class OrphanCleanerPlugin extends Plugin {
 		}
 
 		const targetExtensions: string[] = this.settings.fileExtensions
-			.toLowerCase().split(" ");
+			.toLowerCase()
+			.split(/[\s,]+/)
+			.map((ext) => ext.replace(/^\.+/, ""))
+			.filter((ext) => ext.length > 0);
 
 		const excludedPaths: string[] = this.settings.excludedPaths
 			.split("\n")
