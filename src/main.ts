@@ -114,6 +114,8 @@ export default class OrphanCleanerPlugin extends Plugin {
 			.map((path) => path.trim().replace(/\/+$/, ""))
 			.filter((path) => path.length > 0);
 
+		const excludeTags: boolean = this.settings.excludeTags;
+
 		for (const file of files) {
 			if (this.isExcluded(file.path, excludedPaths)) continue;
 			if (!targetExtensions.includes(file.extension.toLowerCase())) continue;
@@ -122,7 +124,7 @@ export default class OrphanCleanerPlugin extends Plugin {
 			const outgoingLinks = resolvedLinks[file.path];
 			if (outgoingLinks && Object.keys(outgoingLinks).length > 0) continue;
 
-			if (this.hasTags(file)) continue;
+			if (excludeTags && this.hasTags(file)) continue;
 
 			orphans.push(file);
 		}

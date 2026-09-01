@@ -4,11 +4,13 @@ import OrphanCleanerPlugin from './main';
 export interface OrphanCleanerSettings {
 	fileExtensions: string;
 	excludedPaths: string;
+	excludeTags: boolean;
 }
 
 export const DEFAULT_SETTINGS: OrphanCleanerSettings = {
 	fileExtensions: 'md png jpeg pdf',
 	excludedPaths: '',
+	excludeTags: true,
 };
 
 export class OrphanCleanerSettingsTab extends PluginSettingTab {
@@ -26,7 +28,8 @@ export class OrphanCleanerSettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('File extensions')
-			.setDesc("The plugin will search only for these file extensions.\n" + 
+			.setDesc(
+				"The plugin will search only for these file extensions.\n" + 
 				"Enter extension names separated by a single space and without dots"
 			).addText((text) =>
 				text
@@ -53,6 +56,20 @@ export class OrphanCleanerSettingsTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 				text.inputEl.rows = 4;
+			});
+
+		new Setting(containerEl)
+			.setName('Exclude files with tags')
+			.setDesc(
+				"Files that have any tags will not be considered orphans even if they have no connections."
+			)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.excludeTags)
+					.onChange(async (value) => {
+						this.plugin.settings.excludeTags = value;
+						await this.plugin.saveSettings();
+					});
 			});
 	}
 }
