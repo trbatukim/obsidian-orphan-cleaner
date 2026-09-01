@@ -1,89 +1,54 @@
 import {
-	Editor,
-	MarkdownView,
-	MarkdownFileInfo,
+	App,
 	Modal,
 	Notice,
 	Plugin,
+	TFile,
 } from 'obsidian';
 import {
 	DEFAULT_SETTINGS,
-	MyPluginSettings,
-	SampleSettingTab,
+	OrphanCleanerSettings,
+	OrphanCleanerSettingsTab,
 } from './settings';
 
-// Remember to rename these classes and interfaces!
 
-export default class MyPlugin extends Plugin {
-	settings!: MyPluginSettings;
+export default class OrphanCleanerPlugin extends Plugin {
+	settings!: OrphanCleanerSettings;
 
 	async onload() {
+		console.log("Loading Orphan Node Cleaner...");
+
 		await this.loadSettings();
 
 		// This creates an icon in the left ribbon.
-		this.addRibbonIcon('dice', 'Sample', (_evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
+		this.addRibbonIcon('trash', 'Clean Orphan Nodes', (_evt: MouseEvent) => {
+			this.openOrphanConfirmation();
 		});
-
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status bar text');
 
 		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
-			id: 'open-modal-simple',
-			name: 'Open modal (simple)',
+			id: 'clean-orphan-nodes',
+			name: 'Clean orphan nodes',
 			callback: () => {
-				new SampleModal(this.app).open();
+				this.openOrphanConfirmation();
 			},
 		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'replace-selected',
-			name: 'Replace selected content',
-			editorCallback: (
-				editor: Editor,
-				_ctx: MarkdownView | MarkdownFileInfo,
-			) => {
-				editor.replaceSelection('Sample editor command');
-			},
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-modal-complex',
-			name: 'Open modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView =
-					this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
+	}
 
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-				return false;
-			},
-		});
+	openOrphanConfirmation() {
+		const orphans = this.findOrphans();
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+		if (orphans.length === 0) {
+			new Notice('No orphan files found.');
+			return;
+		}
 
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(activeDocument, 'click', (_evt: MouseEvent) => {
-			new Notice('Click');
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(
-			window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000),
-		);
+		new ConfirmDeleteModal(this.app, orphans, async () => {
+			for (const file of orphans) {
+				await this.app.vault.trash(file, true);
+			}
+			new Notice(`Deleted ${orphans.length} orphan file(s).`);
+		}).open();
 	}
 
 	onunload() {}
@@ -92,23 +57,82 @@ export default class MyPlugin extends Plugin {
 		this.settings = Object.assign(
 			{},
 			DEFAULT_SETTINGS,
-			(await this.loadData()) as Partial<MyPluginSettings>,
+			(await this.loadData()) as Partial<OrphanCleanerSettings>,
 		);
 	}
 
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
+
+	findOrphans(): TFile[] {
+		const files = this.app.vault.getFiles();
+		const resolvedLinks = this.app.metadataCache.resolvedLinks;
+		const orphans: TFile[] = [];
+		const nonOrphans: Set<string> = new Set(Object.keys(resolvedLinks));
+
+		const referencedPaths: Set<string> = new Set();
+		for (const targets of Object.values(resolvedLinks)) {
+			for (const targetPath of Object.keys(targets)) {
+				referencedPaths.add(targetPath);
+			}
+		}
+
+		const targetExtensions: string[] = ["md", "png", "pdf", "jpeg"];
+
+		for (const file of files) {
+			if (!targetExtensions.includes(file.extension.toLowerCase())) {
+				nonOrphans.add(file.path);
+				continue;
+			}
+			
+			if (referencedPaths.has(file.path)) nonOrphans.add(file.path);
+			if (resolvedLinks[file.path]) nonOrphans.add(file.path);
+
+			if (!nonOrphans.has(file.path)) orphans.push(file);
+		}
+
+		return orphans;
+	}
 }
 
-class SampleModal extends Modal {
+class ConfirmDeleteModal extends Modal {
+	private files: TFile[];
+	private onConfirm: () => void;
+
+	constructor(app: App, files: TFile[], onConfirm: () => void) {
+		super(app);
+		this.files = files;
+		this.onConfirm = onConfirm;
+	}
+
 	onOpen() {
 		const { contentEl } = this;
-		contentEl.setText('Woah!');
+
+		contentEl.createEl('h2', { text: `Delete ${this.files.length} orphan file(s)?` });
+
+		const list = contentEl.createEl('ul');
+		for (const file of this.files) {
+			list.createEl('li', { text: file.path });
+		}
+
+		const buttonRow = contentEl.createDiv({ cls: 'modal-button-container' });
+
+		buttonRow.createEl('button', { text: 'Cancel' }).addEventListener('click', () => {
+			this.close();
+		});
+
+		const confirmButton = buttonRow.createEl('button', {
+			text: 'Delete',
+			cls: 'mod-warning',
+		});
+		confirmButton.addEventListener('click', () => {
+			this.onConfirm();
+			this.close();
+		});
 	}
 
 	onClose() {
-		const { contentEl } = this;
-		contentEl.empty();
+		this.contentEl.empty();
 	}
 }

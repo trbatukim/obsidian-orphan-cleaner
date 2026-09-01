@@ -1,6 +1,6 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
+	"id": "obsidian-orphan-cleaner",
+	"name": "Orphan Cleaner",
 	"version": "1.0.0",
 	"minAppVersion": "1.0.0",
 	"description": "Demonstrates some of the capabilities of the Obsidian API.",
