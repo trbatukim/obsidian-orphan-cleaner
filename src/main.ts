@@ -25,6 +25,10 @@ export default class OrphanCleanerPlugin extends Plugin {
 			}),
 		);
 
+		this.app.workspace.onLayoutReady(() => {
+			this.metadataCacheResolved = true;
+		});
+
 		this.addSettingTab(new OrphanCleanerSettingsTab(this.app, this));
 
 		this.addRibbonIcon('trash', 'Clean orphan nodes', (_evt: MouseEvent) => {
@@ -93,7 +97,6 @@ export default class OrphanCleanerPlugin extends Plugin {
 		const files = this.app.vault.getFiles();
 		const resolvedLinks = this.app.metadataCache.resolvedLinks;
 		const orphans: TFile[] = [];
-		const nonOrphans: Set<string> = new Set(Object.keys(resolvedLinks));
 
 		const referencedPaths: Set<string> = new Set();
 		for (const targets of Object.values(resolvedLinks)) {
@@ -112,16 +115,10 @@ export default class OrphanCleanerPlugin extends Plugin {
 
 		for (const file of files) {
 			if (this.isExcluded(file.path, excludedPaths)) continue;
+			if (!targetExtensions.includes(file.extension.toLowerCase())) continue;
+			if (referencedPaths.has(file.path)) continue;
 
-			if (!targetExtensions.includes(file.extension.toLowerCase())) {
-				nonOrphans.add(file.path);
-				continue;
-			}
-
-			if (referencedPaths.has(file.path)) nonOrphans.add(file.path);
-			if (resolvedLinks[file.path]) nonOrphans.add(file.path);
-
-			if (!nonOrphans.has(file.path)) orphans.push(file);
+			orphans.push(file);
 		}
 
 		return orphans;
