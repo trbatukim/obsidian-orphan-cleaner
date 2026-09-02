@@ -28,7 +28,7 @@ Open **Settings → Orphan Cleaner** to configure:
 ## Installing
 
 1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/trbatukim/obsidian-orphan-cleaner/releases).
-2. Copy them into `<VaultFolder>/.obsidian/plugins/obsidian-orphan-cleaner/`.
+2. Copy them into `<VaultFolder>/.obsidian/plugins/orphan-cleaner/`.
 3. Reload Obsidian and enable **Orphan Cleaner** in **Settings → Community plugins**.
 
 ## Development
@@ -40,7 +40,7 @@ npm run build       # type-check and produce a production build
 npm run lint        # run eslint
 ```
 
-Copy or symlink the repo into `<VaultFolder>/.obsidian/plugins/obsidian-orphan-cleaner/` for local testing, then reload Obsidian after each build.
+Copy or symlink the repo into `<VaultFolder>/.obsidian/plugins/orphan-cleaner/` for local testing, then reload Obsidian after each build.
 
 ## License
 

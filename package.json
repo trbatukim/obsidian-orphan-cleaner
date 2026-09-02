@@ -1,5 +1,5 @@
 {
-	"name": "obsidian-orphan-cleaner",
+	"name": "orphan-cleaner",
 	"version": "1.0.0",
 	"description": "Finds and deletes orphan nodes.",
 	"main": "main.js",
