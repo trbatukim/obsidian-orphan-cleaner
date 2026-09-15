@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting } from 'obsidian';
+import { App, PluginSettingTab, Setting, SettingDefinitionItem } from 'obsidian';
 import OrphanCleanerPlugin from './main';
 
 export interface OrphanCleanerSettings {
@@ -19,6 +19,45 @@ export class OrphanCleanerSettingsTab extends PluginSettingTab {
 	constructor(app: App, plugin: OrphanCleanerPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
+	}
+
+	getSettingDefinitions(): SettingDefinitionItem[] {
+		return [
+			{
+				name: 'File extensions',
+				desc:
+					"The plugin will search only for these file extensions.\n" +
+					"Enter extension names separated by a single space and without dots",
+				control: {
+					type: 'text',
+					key: 'fileExtensions',
+					placeholder: 'md png jpeg pdf',
+					defaultValue: DEFAULT_SETTINGS.fileExtensions,
+				},
+			},
+			{
+				name: 'Excluded paths',
+				desc:
+					'Files inside these folders, or matching these exact file paths, will never be treated as orphans. ' +
+					'Enter one folder or file path per line, relative to the vault root.',
+				control: {
+					type: 'textarea',
+					key: 'excludedPaths',
+					placeholder: 'Templates\nAttachments/Archive',
+					rows: 4,
+					defaultValue: DEFAULT_SETTINGS.excludedPaths,
+				},
+			},
+			{
+				name: 'Exclude files with tags',
+				desc: "Files that have any tags will not be considered orphans even if they have no connections.",
+				control: {
+					type: 'toggle',
+					key: 'excludeTags',
+					defaultValue: DEFAULT_SETTINGS.excludeTags,
+				},
+			},
+		];
 	}
 
 	display(): void {
